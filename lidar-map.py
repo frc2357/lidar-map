@@ -4,11 +4,12 @@ import cv2
 from math import floor
 import numpy as np
 import json
+from multiprocessing import Process, Pipe
 import os
 import sys
 import time
 
-from lidarunit import LidarUnit
+from lidarunit import lidar_unit_process
 from lidarimage import LidarImage
 from cscore import CameraServer, MjpegServer
 from networktables import NetworkTablesInstance
@@ -49,7 +50,7 @@ server = False
 
 def parseError(str):
     """Report parse error."""
-    print("config error in '" + configFile + "': " + str, file=sys.stderr)
+    print("Main: config error in '" + configFile + "': " + str, file=sys.stderr)
 
 def readConfig():
     """Read configuration file."""
@@ -61,7 +62,7 @@ def readConfig():
         with open(configFile, "rt", encoding="utf-8") as f:
             j = json.load(f)
     except OSError as err:
-        print("could not open '{}': {}".format(configFile, err), file=sys.stderr)
+        print("Main: could not open '{}': {}".format(configFile, err), file=sys.stderr)
         return False
 
     # top level must be an object
@@ -89,7 +90,6 @@ def readConfig():
     return True
 
 
-lidar1 = LidarUnit(LIDAR_UNIT_1_PORT, LIDAR1_ANGLE_OFFSET, LIDAR1_IGNORE_REGIONS)
 lidarImage = LidarImage(ROBOT_WIDTH, ROBOT_LENGTH, MAX_RANGE)
 
 if __name__ == "__main__":
@@ -103,10 +103,10 @@ if __name__ == "__main__":
     # start NetworkTables
     ntinst = NetworkTablesInstance.getDefault()
     if server:
-        print("Setting up NetworkTables server")
+        print("Main: Setting up NetworkTables server")
         ntinst.startServer()
     else:
-        print("Setting up NetworkTables client for team {}".format(team))
+        print("Main: Setting up NetworkTables client for team {}".format(team))
         ntinst.startClientTeam(team)
         ntinst.startDSClient()
 
@@ -116,31 +116,34 @@ if __name__ == "__main__":
 
     outputStream = cs.putVideo("VideoStream", IMAGE_OUTPUT_WIDTH, IMAGE_OUTPUT_HEIGHT)
 
+    parent_conn, child_conn = Pipe()
+    p = Process(target=lidar_unit_process, args=(child_conn, LIDAR_UNIT_1_PORT, LIDAR1_ANGLE_OFFSET, LIDAR1_IGNORE_REGIONS))
+    p.start()
+
     scan_data = np.zeros(360)
 
     iter_start = time.time_ns()
     iter_end = time.time_ns()
+    lidar1_count = 0
 
     # loop forever
-    print("Entering loop")
-    try:
-        while True:
-            for lidar in lidar1.scan():
-                iter_start = time.time_ns()
-                wait_time_ms = int((iter_start - iter_end) / 1000000)
-                scan_data[:] = 0
-                for (angle, distance) in lidar.measurements():
-                    scan_data[int(floor(angle))] = distance
+    print("Main: Entering main loop")
+    while True:
+        if (parent_conn.poll()):
+            isComplete, angle, distance = parent_conn.recv()
+
+            if isComplete:
+                print(f"Main: lidar1 count: {lidar1_count}")
+
                 lidarImage.clear()
                 lidarImage.drawRobot()
                 lidarImage.drawScan(scan_data, LIDAR1_X, LIDAR1_Y, LIDAR1_COLOR)
-                outputStream.putFrame(lidarImage.image)
-                iter_end = time.time_ns()
-                iter_time_ms = int((iter_end - iter_start) / 1000000)
-                print(f"wait time(ms): {wait_time_ms}, iteration time(ms): {iter_time_ms}")
+                scan_data[:] = 0
+                lidar1_count = 0
+            else:
+                scan_data[int(floor(angle))] = distance
+                lidar1_count += 1
+        else:
+            time.sleep(0.001)
 
-    except KeyboardInterrupt:
-        print("Stopping.")
-
-    lidar1.stop_motor()
-    lidar1.disconnect()
+        outputStream.putFrame(lidarImage.image)

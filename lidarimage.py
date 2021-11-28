@@ -47,7 +47,7 @@ class LidarImage:
                 ping_y = (distance * sin(radians)) + scanner_y
 
                 ping_image = self._field_to_image(ping_x, ping_y)
-                image_x = min(ping_image[0], self.image_width)
-                image_y = min(ping_image[1], self.image_height)
+                image_x = min(ping_image[0], self.image_width - 1)
+                image_y = min(ping_image[1], self.image_height - 1)
 
                 self.image[image_y, image_x] = color

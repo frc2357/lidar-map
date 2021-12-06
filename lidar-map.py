@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 
 import cv2
-from math import floor
-import numpy as np
 import json
-from multiprocessing import Process, Pipe
 import os
 import sys
 import time
 
-from lidarunit import lidar_unit_process
+from lidarunit import LidarUnitProcess
 from lidarimage import LidarImage
 from cscore import CameraServer, MjpegServer
 from networktables import NetworkTablesInstance
@@ -33,12 +30,16 @@ MAX_RANGE = 4572 # 15 feet
 LIDAR1_COLOR = (100, 255, 100)
 LIDAR1_X = ((ROBOT_WIDTH / 2) - 40) # 30 cm inside robot perimiter
 LIDAR1_Y = -((ROBOT_LENGTH / 2) - 40) # 30 cm inside robot perimiter
-LIDAR1_ANGLE_OFFSET = -90
-LIDAR1_IGNORE_REGIONS = [ [180, 270] ]
 
+lidar1 = LidarUnitProcess(
+    '/dev/ttyUSB0',        # lidar usb device
+    -90,                   # angle offset
+    [ [180, 270] ]         # ignore regions
+)
+
+LIDAR2_COLOR = (255, 100, 100)
 LIDAR2_X = -((ROBOT_WIDTH / 2) - 40) # 30 cm inside robot perimiter
 LIDAR2_Y = ((ROBOT_LENGTH / 2) - 40) # 30 cm inside robot perimiter
-LIDAR2_COLOR = (255, 100, 100)
 
 # Include the root path of this project for imports below
 sys.path.append(__file__[0:__file__.rfind('/')] + '/.')
@@ -116,34 +117,14 @@ if __name__ == "__main__":
 
     outputStream = cs.putVideo("VideoStream", IMAGE_OUTPUT_WIDTH, IMAGE_OUTPUT_HEIGHT)
 
-    parent_conn, child_conn = Pipe()
-    p = Process(target=lidar_unit_process, args=(child_conn, LIDAR_UNIT_1_PORT, LIDAR1_ANGLE_OFFSET, LIDAR1_IGNORE_REGIONS))
-    p.start()
-
-    scan_data = np.zeros(360)
-
-    iter_start = time.time_ns()
-    iter_end = time.time_ns()
-    lidar1_count = 0
+    lidar1.start()
 
     # loop forever
     print("Main: Entering main loop")
     while True:
-        if (parent_conn.poll()):
-            isComplete, angle, distance = parent_conn.recv()
-
-            if isComplete:
-                print(f"Main: lidar1 count: {lidar1_count}")
-
-                lidarImage.clear()
-                lidarImage.drawRobot()
-                lidarImage.drawScan(scan_data, LIDAR1_X, LIDAR1_Y, LIDAR1_COLOR)
-                scan_data[:] = 0
-                lidar1_count = 0
-            else:
-                scan_data[int(floor(angle))] = distance
-                lidar1_count += 1
-        else:
-            time.sleep(0.001)
+        if (lidar1.update()):
+            lidarImage.clear()
+            lidarImage.drawRobot()
+            lidarImage.drawScan(lidar1.scan_data, LIDAR1_X, LIDAR1_Y, LIDAR1_COLOR)
 
         outputStream.putFrame(lidarImage.image)

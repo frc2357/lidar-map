@@ -4,7 +4,10 @@ import cv2
 import json
 import os
 import sys
-import time
+from time import sleep, time_ns
+
+# Include the root path of this project for imports below
+sys.path.append(__file__[0:__file__.rfind('/')] + '/.')
 
 from lidarunit import LidarUnitProcess
 from lidarimage import LidarImage
@@ -17,6 +20,9 @@ LIDAR_UNIT_2_PORT = '/dev/ttyUSB1'
 IMAGE_OUTPUT_WIDTH = 640
 IMAGE_OUTPUT_HEIGHT = 480
 
+FRAME_MS = (1000 / 30)
+LOOP_ITERATION_WARNING_MS = 15
+
 ## Standard Robot (29in x 30in) on field
 #ROBOT_WIDTH = 737 # 29 inches
 #ROBOT_LENGTH = 762 # 30 inches
@@ -27,22 +33,33 @@ ROBOT_WIDTH = 310
 ROBOT_LENGTH = 225
 MAX_RANGE = 4572 # 15 feet
 
-LIDAR1_COLOR = (100, 255, 100)
+LIDAR1_COLOR = (50, 255, 50)
 LIDAR1_X = ((ROBOT_WIDTH / 2) - 40) # 30 cm inside robot perimiter
 LIDAR1_Y = -((ROBOT_LENGTH / 2) - 40) # 30 cm inside robot perimiter
 
-lidar1 = LidarUnitProcess(
-    '/dev/ttyUSB0',        # lidar usb device
-    -90,                   # angle offset
-    [ [180, 270] ]         # ignore regions
-)
-
-LIDAR2_COLOR = (255, 100, 100)
+LIDAR2_COLOR = (255, 50, 50)
 LIDAR2_X = -((ROBOT_WIDTH / 2) - 40) # 30 cm inside robot perimiter
 LIDAR2_Y = ((ROBOT_LENGTH / 2) - 40) # 30 cm inside robot perimiter
 
-# Include the root path of this project for imports below
-sys.path.append(__file__[0:__file__.rfind('/')] + '/.')
+lidar_units = [
+    LidarUnitProcess(
+        '/dev/ttyUSB0',        # lidar usb device
+        -90,                   # angle offset
+        [ [180, 300] ]         # ignore regions
+    ),
+    LidarUnitProcess(
+        '/dev/ttyUSB1',        # lidar usb device
+        90,                    # angle offset
+        [ [180, 300] ]         # ignore regions
+    ),
+]
+
+lidar_unit_offsets = [
+    (LIDAR1_X, LIDAR1_Y),
+    (LIDAR2_X, LIDAR2_Y),
+]
+
+lidar_unit_colors = [ LIDAR1_COLOR, LIDAR2_COLOR ]
 
 configFile = "/boot/frc.json"
 
@@ -111,20 +128,44 @@ if __name__ == "__main__":
         ntinst.startClientTeam(team)
         ntinst.startDSClient()
 
+    print("Main: Initializing Lidar Units")
+    for unit in lidar_units:
+        unit.start()
+
+    print("Main: Starting in 5 seconds")
+    sleep(5)
+
     # start cameras
     cs = CameraServer.getInstance()
     cs.enableLogging()
 
     outputStream = cs.putVideo("VideoStream", IMAGE_OUTPUT_WIDTH, IMAGE_OUTPUT_HEIGHT)
-
-    lidar1.start()
+    last_frame_ms = 0
 
     # loop forever
     print("Main: Entering main loop")
     while True:
-        if (lidar1.update()):
+        start_iteration_ms = time_ns() / 1000000
+
+        for unit in lidar_units:
+            try:
+                unit.update()
+            except EOFError as e:
+                print(f"Main: EOF on {unit.usb_tty} process. Restarting.")
+                unit.start()
+
+        if start_iteration_ms - last_frame_ms > FRAME_MS:
             lidarImage.clear()
             lidarImage.drawRobot()
-            lidarImage.drawScan(lidar1.scan_data, LIDAR1_X, LIDAR1_Y, LIDAR1_COLOR)
 
-        outputStream.putFrame(lidarImage.image)
+            for index, unit in enumerate(lidar_units):
+               offset_x, offset_y = lidar_unit_offsets[index]
+               color = lidar_unit_colors[index]
+               lidarImage.drawScan(unit.scan_data, offset_x, offset_y, color)
+
+            outputStream.putFrame(lidarImage.image)
+            last_frame_ms = start_iteration_ms
+
+        iteration_time_ms = (time_ns() / 1000000) - start_iteration_ms
+        if iteration_time_ms > LOOP_ITERATION_WARNING_MS:
+            print(f"Main: WARNING, iteration took {int(iteration_time_ms)}ms")

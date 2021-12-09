@@ -6,14 +6,13 @@ class LidarImage:
     def __init__(self, robot_width, robot_length, max_range):
         self.image_width = 640
         self.image_height = 480
-        self.floor_color = (40, 40, 40)
+        self.floor_color = (20, 20, 20)
         self.robot_color = (180, 180, 180)
         self.scanner_radius = 3
 
         self.robot_width = robot_width
         self.robot_length = robot_length
         self.image = np.zeros(shape=(self.image_height, self.image_width, 3), dtype=np.uint8)
-        self.max_distance = 0
         self.max_range = max_range
 
         self.image_center_x = int(self.image_width / 2)
@@ -24,8 +23,8 @@ class LidarImage:
 
     def _field_to_image(self, field_x, field_y):
         return (
-            self.image_center_x + (int((field_x / (self.max_range * 2)) * self.image_width)),
-            self.image_center_y + (int((field_y / (self.max_range * 2)) * self.image_height))
+            min(self.image_center_x + (int((field_x / (self.max_range * 2)) * self.image_width)), self.image_width - 1),
+            min(self.image_center_y + (int((field_y / (self.max_range * 2)) * self.image_height)), self.image_height - 1),
         )
 
     def clear(self):
@@ -46,8 +45,10 @@ class LidarImage:
                 ping_x = (distance * cos(radians)) + scanner_x
                 ping_y = (distance * sin(radians)) + scanner_y
 
-                ping_image = self._field_to_image(ping_x, ping_y)
-                image_x = min(ping_image[0], self.image_width - 1)
-                image_y = min(ping_image[1], self.image_height - 1)
-
+                image_x, image_y = self._field_to_image(ping_x, ping_y)
                 self.image[image_y, image_x] = color
+
+    def drawPoints(self, points, color):
+        for point in points:
+            image_x, image_y = self._field_to_image(point.x, point.y)
+            self.image[image_y, image_x] = color

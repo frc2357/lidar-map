@@ -6,8 +6,8 @@ from PIL import Image
 
 MM_PER_FOOT = 304.8
 
-COLOR_BG = (0xFF, 0xFF, 0xFF)
 COLOR_WALL = (0x00, 0x00, 0x00)
+COLOR_PING = (0x00, 0xFF, 0x00)
 
 def convert_image_file(image_filename, center_x_pixel, center_y_pixel, mm_per_pixel):
     point_filename = image_filename + '.point'
@@ -28,33 +28,38 @@ def convert_image_file(image_filename, center_x_pixel, center_y_pixel, mm_per_pi
 
         with open(point_filename, 'wb') as point_file:
             wall_points = []
+            ping_points = []
 
             for y_pixel in range(0, image.height):
                 for x_pixel in range(0, image.width):
                     pixel_color = image.getpixel((x_pixel, y_pixel))
-
-                    if (pixel_color == COLOR_BG):
-                        continue
 
                     x_mm = (x_pixel - center_x_pixel) * mm_per_pixel
                     y_mm = (y_pixel - center_y_pixel) * mm_per_pixel
 
                     if (pixel_color == COLOR_WALL):
                         wall_points.append((x_mm, y_mm))
+                    elif (pixel_color == COLOR_PING):
+                        ping_points.append((x_mm, y_mm))
 
             point_data = {
                 'center_x_pixel': center_x_pixel,
                 'center_y_pixel': center_y_pixel,
                 'mm_per_pixel': mm_per_pixel,
-                'wall_points': wall_points,
             }
 
-            print(f'{len(wall_points)} wall points')
+            if len(wall_points) > 0:
+                point_data['wall_points'] = wall_points
+                print(f'{len(wall_points)} wall points')
+
+            if len(ping_points) > 0:
+                point_data['ping_points'] = ping_points
+                print(f'{len(ping_points)} ping points')
 
             pickle.dump(point_data, point_file)
 
 def main():
-    desc = "Converts image data to lidar point data.\n"
+    desc = "Converts image map data to lidar point data.\n"
 
     parser = argparse.ArgumentParser(description = desc)
     parser.add_argument('image_file', help='The lidar image file')

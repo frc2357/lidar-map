@@ -1,7 +1,8 @@
 from matplotlib import animation, rc
+import matplotlib.pyplot as plt
 from IPython.display import display, Math, Latex, Markdown, HTML
 
-def plot_data(plt, data_1, data_2, label_1, label_2, markersize_1=8, markersize_2=8):
+def plot_data(data_1, data_2, label_1, label_2, markersize_1=8, markersize_2=8):
     fig = plt.figure(figsize=(10, 6))
     ax = fig.add_subplot(111)
     ax.axis('equal')
@@ -14,7 +15,7 @@ def plot_data(plt, data_1, data_2, label_1, label_2, markersize_1=8, markersize_
     ax.legend()
     return ax
 
-def plot_values(plt, values, label):
+def plot_values(values, label):
     fig = plt.figure(figsize=(10, 4))
     ax = fig.add_subplot(111)
     ax.plot(values, label=label)
@@ -22,7 +23,7 @@ def plot_values(plt, values, label):
     ax.grid(True)
     plt.show()
     
-def animate_results(plt, P_values, Q, correspondences, corresp_values, xlim, ylim):
+def animate_results(P_values, Q, correspondences, corresp_values, xlim, ylim):
     """A function used to animate the iterative processes we use."""
     fig = plt.figure(figsize=(10, 6))
     anim_ax = fig.add_subplot(111)

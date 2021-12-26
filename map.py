@@ -1,15 +1,14 @@
 from PIL import Image, ImageDraw
 import math
 import os
+import pickle
 
 ROBOT_MARKER_RADIUS = 50
-ROBOT_COLOR = "#FFAE02"
-ROBOT_ANGLE_INDICATOR_COLOR = "#B97800"
+ROBOT_COLOR = (0xFF, 0xAE, 0x02)
+ROBOT_ANGLE_INDICATOR_COLOR = (0xB9, 0x78, 0x00)
 
 def load_frc2019_field():
-    center_point_pixels = (1571, 3001)
-    mm_per_pixel = 2.77839
-    return Map('FRC2019 LiDAR Lines.png', center_point_pixels, mm_per_pixel)
+    return Map('FRC2019 LiDAR Lines.png', 'FRC2019 LiDAR Lines.png.point')
 
 class Robot:
     def __init__(self):
@@ -23,25 +22,41 @@ class Robot:
         self.heading_degrees = heading_degrees
 
 class Map:
-    def __init__(self, filename, center_point_pixels, mm_per_pixel):
-        self.filename = filename
-        self.center_point_pixels = center_point_pixels
-        self.mm_per_pixel = mm_per_pixel
-        self.image = self._load_image(filename)
+    def __init__(self, image_filename, point_filename):
+        self.image = self._load_image(image_filename)
+        self.point_data = self._load_point_data(point_filename)
 
-    def _load_image(self, filename):
+    def _get_file_path(self, filename):
         this_module_dir = os.path.dirname(os.path.abspath(__file__))
         path = os.path.join(this_module_dir, './maps/', filename)
 
         if not os.path.isfile(path):
-            raise Exception(f"File does not exist: {path}")
+            raise Exception(f'File does not exist: {path}')
 
+        return path
+
+    def _load_image(self, filename):
+        path = self._get_file_path(filename)
         image = Image.open(path)
-
-        if image is None:
-            raise Exception(f"Failed to load image {filename}")
-
+        image.load()
         return image
+
+    def _load_point_data(self, filename):
+        path = self._get_file_path(filename)
+        with open(path, 'rb') as f:
+            return pickle.load(f)
+
+    @property
+    def mm_per_pixel(self):
+        return self.point_data['mm_per_pixel']
+
+    @property
+    def center_x_pixel(self):
+        return self.point_data['center_x_pixel']
+
+    @property
+    def center_y_pixel(self):
+        return self.point_data['center_y_pixel']
 
     @property
     def width_mm(self):
@@ -57,13 +72,11 @@ class Map:
 
     def coordinates_mm_to_px(self, coords_mm):
         ( x_mm, y_mm ) = coords_mm
-        ( center_x_px, center_y_px ) = self.center_point_pixels
-        x_px = (x_mm / self.mm_per_pixel) + center_x_px
-        y_px = (y_mm / self.mm_per_pixel) + center_y_px
+        x_px = (x_mm / self.mm_per_pixel) + self.center_x_pixel
+        y_px = (y_mm / self.mm_per_pixel) + self.center_y_pixel
         return (x_px, y_px)
     
     def draw_map_with_robot(self, robot):
-        fill = "#FFAE02"
         base_image = self.image.copy()
         draw = ImageDraw.Draw(base_image)
 
@@ -81,11 +94,10 @@ class Map:
         return base_image
 
     def draw_local_map(self, robot, range_radius_mm):
-        ( center_x_px, center_y_px ) = self.center_point_pixels
         location_x_offset = (robot.location_x_mm / self.mm_per_pixel)
         location_y_offset = (robot.location_y_mm / self.mm_per_pixel)
-        location_x_px = location_x_offset + center_x_px
-        location_y_px = location_y_offset + center_y_px
+        location_x_px = location_x_offset + self.center_x_pixel
+        location_y_px = location_y_offset + self.center_y_pixel
         range_radius_px = range_radius_mm / self.mm_per_pixel
 
         local_image = self.draw_map_with_robot(robot).rotate(
@@ -95,10 +107,10 @@ class Map:
             fillcolor = '#ddd',
         )
 
-        left = center_x_px - range_radius_px
-        right = center_x_px + range_radius_px
-        top = center_y_px - range_radius_px
-        bottom = center_y_px + range_radius_px
+        left = self.center_x_pixel - range_radius_px
+        right = self.center_x_pixel + range_radius_px
+        top = self.center_y_pixel - range_radius_px
+        bottom = self.center_y_pixel + range_radius_px
         local_image = local_image.crop((left, top, right, bottom))
 
         return local_image

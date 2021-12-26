@@ -2,12 +2,27 @@ from PIL import Image, ImageDraw
 import math
 import os
 
+ROBOT_MARKER_RADIUS = 50
+ROBOT_COLOR = "#FFAE02"
+ROBOT_ANGLE_INDICATOR_COLOR = "#B97800"
+
 def load_frc2019_field():
     center_point_pixels = (1571, 3001)
     mm_per_pixel = 2.77839
     return Map('FRC2019 LiDAR Lines.png', center_point_pixels, mm_per_pixel)
 
-class ImageObject:
+class Robot:
+    def __init__(self):
+        self.location_x_mm = 0.0
+        self.location_y_mm = 0.0
+        self.heading_degrees = 0.0
+
+    def set_position(self, location_x_mm, location_y_mm, heading_degrees):
+        self.location_x_mm = location_x_mm
+        self.location_y_mm = location_y_mm
+        self.heading_degrees = heading_degrees
+
+class Map:
     def __init__(self, filename, center_point_pixels, mm_per_pixel):
         self.filename = filename
         self.center_point_pixels = center_point_pixels
@@ -40,21 +55,6 @@ class ImageObject:
     def size_mm(self):
         return (self.width_mm, self.height_mm)
 
-class Robot:
-    def __init__(self):
-        self.location_x_mm = 0.0
-        self.location_y_mm = 0.0
-        self.heading_degrees = 0.0
-
-    def set_position(self, location_x_mm, location_y_mm, heading_degrees):
-        self.location_x_mm = location_x_mm
-        self.location_y_mm = location_y_mm
-        self.heading_degrees = heading_degrees
-
-class Map(ImageObject):
-    def __init__(self, filename, center_point_pixels, mm_per_pixel):
-        super().__init__(filename, center_point_pixels, mm_per_pixel)
-
     def coordinates_mm_to_px(self, coords_mm):
         ( x_mm, y_mm ) = coords_mm
         ( center_x_px, center_y_px ) = self.center_point_pixels
@@ -69,13 +69,14 @@ class Map(ImageObject):
 
         ( robot_x_px, robot_y_px ) = self.coordinates_mm_to_px((robot.location_x_mm, robot.location_y_mm))
 
-        radius = 100
+        radius = ROBOT_MARKER_RADIUS
+        line_width = int(ROBOT_MARKER_RADIUS / 2)
         circle = [ robot_x_px - radius, robot_y_px - radius, robot_x_px + radius, robot_y_px + radius ]
-        draw.ellipse(circle, fill = fill)
+        draw.ellipse(circle, fill = ROBOT_COLOR)
 
-        tip_x = robot_x_px + (math.sin(math.radians(180 - robot.heading_degrees)) * radius * 2)
-        tip_y = robot_y_px + (math.cos(math.radians(180 - robot.heading_degrees)) * radius * 2)
-        draw.line([ robot_x_px, robot_y_px, tip_x, tip_y ], fill = fill, width = 30)
+        tip_x = robot_x_px + (math.sin(math.radians(180 - robot.heading_degrees)) * radius * 1)
+        tip_y = robot_y_px + (math.cos(math.radians(180 - robot.heading_degrees)) * radius * 1)
+        draw.line([ robot_x_px, robot_y_px, tip_x, tip_y ], fill = ROBOT_ANGLE_INDICATOR_COLOR, width = line_width)
 
         return base_image
 

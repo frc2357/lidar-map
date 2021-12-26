@@ -1,4 +1,3 @@
-### frc_lidar.py
 import cv2
 import sys
 import numpy as np
@@ -22,18 +21,6 @@ def get_correspondence_indices(P, Q):
                 chosen_idx = j
         correspondences.append((i, chosen_idx))
     return correspondences
-
-def draw_correspondeces(P, Q, correspondences, ax):
-    label_added = False
-    for i, j in correspondences:
-        x = [P[0, i], Q[0, j]]
-        y = [P[1, i], Q[1, j]]
-        if not label_added:
-            ax.plot(x, y, color='grey', label='correpondences')
-            label_added = True
-        else:
-            ax.plot(x, y, color='grey')
-    ax.legend()
     
 def center_data(data, exclude_indices=[]):
     reduced_data = np.delete(data, exclude_indices, axis=1)

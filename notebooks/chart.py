@@ -70,3 +70,8 @@ def draw_correspondences(P, Q, correspondences, ax):
         else:
             ax.plot(x, y, color='grey')
     ax.legend()
+
+def show_map_image(image):
+    plt.imshow(image)
+    plt.xticks([]), plt.yticks([])  # Hides the graph ticks and x / y axis
+    plt.show()

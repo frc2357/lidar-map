@@ -2,47 +2,57 @@ from PIL import Image, ImageDraw
 import math
 import os
 import pickle
+import numpy as np
 
-ROBOT_MARKER_RADIUS = 50
+ROBOT_MARKER_RADIUS = 20
 ROBOT_COLOR = (0xFF, 0xAE, 0x02)
 ROBOT_ANGLE_INDICATOR_COLOR = (0xB9, 0x78, 0x00)
+ROBOT_PING_COLOR = (0x0, 0x80, 0x00)
+ROBOT_PING_POINT_RADIUS = 2
 
 def load_frc2019_field():
     return Map('FRC2019 LiDAR Lines.png', 'FRC2019 LiDAR Lines.png.point')
+
+def _get_file_path(filename):
+    this_module_dir = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(this_module_dir, './maps/', filename)
+
+    if not os.path.isfile(path):
+        raise Exception(f'File does not exist: {path}')
+
+    return path
 
 class Robot:
     def __init__(self):
         self.location_x_mm = 0.0
         self.location_y_mm = 0.0
         self.heading_degrees = 0.0
+        self.ping_points = None
 
     def set_position(self, location_x_mm, location_y_mm, heading_degrees):
         self.location_x_mm = location_x_mm
         self.location_y_mm = location_y_mm
         self.heading_degrees = heading_degrees
 
+    def load_scan_file(self, filename):
+        path = _get_file_path(filename)
+        with open(path, 'rb') as f:
+            data = pickle.load(f)
+            self.ping_points = data['ping_points']
+
 class Map:
     def __init__(self, image_filename, point_filename):
         self.image = self._load_image(image_filename)
         self.point_data = self._load_point_data(point_filename)
 
-    def _get_file_path(self, filename):
-        this_module_dir = os.path.dirname(os.path.abspath(__file__))
-        path = os.path.join(this_module_dir, './maps/', filename)
-
-        if not os.path.isfile(path):
-            raise Exception(f'File does not exist: {path}')
-
-        return path
-
     def _load_image(self, filename):
-        path = self._get_file_path(filename)
+        path = _get_file_path(filename)
         image = Image.open(path)
         image.load()
         return image
 
     def _load_point_data(self, filename):
-        path = self._get_file_path(filename)
+        path = _get_file_path(filename)
         with open(path, 'rb') as f:
             return pickle.load(f)
 
@@ -57,6 +67,10 @@ class Map:
     @property
     def center_y_pixel(self):
         return self.point_data['center_y_pixel']
+
+    @property
+    def wall_points(self):
+        return self.point_data['wall_points']
 
     @property
     def width_mm(self):
@@ -89,7 +103,20 @@ class Map:
 
         tip_x = robot_x_px + (math.sin(math.radians(180 - robot.heading_degrees)) * radius * 1)
         tip_y = robot_y_px + (math.cos(math.radians(180 - robot.heading_degrees)) * radius * 1)
-        draw.line([ robot_x_px, robot_y_px, tip_x, tip_y ], fill = ROBOT_ANGLE_INDICATOR_COLOR, width = line_width)
+        draw.line([ robot_x_px, robot_y_px, tip_x, tip_y ], fill=ROBOT_ANGLE_INDICATOR_COLOR, width=line_width)
+
+        if isinstance(robot.ping_points, np.ndarray):
+            for index in range(0, len(robot.ping_points[0])):
+                x_mm = robot.ping_points[0][index]
+                y_mm = robot.ping_points[1][index]
+                ( x_px, y_px ) = self.coordinates_mm_to_px((x_mm, y_mm))
+                ping_circle = [
+                    x_px - ROBOT_PING_POINT_RADIUS,
+                    y_px - ROBOT_PING_POINT_RADIUS,
+                    x_px + ROBOT_PING_POINT_RADIUS,
+                    y_px + ROBOT_PING_POINT_RADIUS,
+                ]
+                draw.ellipse(ping_circle, fill=ROBOT_PING_COLOR)
 
         return base_image
 

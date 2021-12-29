@@ -8,10 +8,10 @@ def plot_data(data_1, data_2, label_1, label_2, markersize_1=8, markersize_2=8):
     ax.axis('equal')
     if data_1 is not None:
         x_p, y_p = data_1
-        ax.plot(x_p, y_p, color='#336699', markersize=markersize_1, marker='o', linestyle=":", label=label_1)
+        ax.plot(x_p, y_p, color='#336699', markersize=markersize_1, marker='o', linestyle="None", label=label_1)
     if data_2 is not None:
         x_q, y_q = data_2
-        ax.plot(x_q, y_q, color='orangered', markersize=markersize_2, marker='o', linestyle=":", label=label_2)
+        ax.plot(x_q, y_q, color='orangered', markersize=markersize_2, marker='o', linestyle="None", label=label_2)
     ax.legend()
     return ax
 
@@ -23,7 +23,7 @@ def plot_values(values, label):
     ax.grid(True)
     plt.show()
     
-def animate_results(P_values, Q, correspondences, corresp_values, xlim, ylim):
+def animate_results(P_values, Q, correspondences, corresp_values, xlim, ylim, markersize_1=2, markersize_2=1):
     """A function used to animate the iterative processes we use."""
     fig = plt.figure(figsize=(10, 6))
     anim_ax = fig.add_subplot(111)
@@ -36,9 +36,9 @@ def animate_results(P_values, Q, correspondences, corresp_values, xlim, ylim):
     for i, j in correspondences:
         corresp_lines.append(anim_ax.plot([], [], 'grey')[0])
     # Prepare Q data.
-    Q_line, = anim_ax.plot(x_q, y_q, 'o', color='orangered')
+    Q_line, = anim_ax.plot(x_q, y_q, markersize=markersize_1, marker='o', color='orangered', linestyle="None")
     # prepare empty line for moved data
-    P_line, = anim_ax.plot([], [], 'o', color='#336699')
+    P_line, = anim_ax.plot([], [], markersize=markersize_2, marker='o', color='#336699', linestyle="None")
 
     def animate(i):
         P_inc = P_values[i]

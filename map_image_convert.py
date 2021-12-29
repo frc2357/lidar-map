@@ -2,12 +2,21 @@ import sys
 import os
 import argparse
 import pickle
+import numpy as np
 from PIL import Image
 
 MM_PER_FOOT = 304.8
 
 COLOR_WALL = (0x00, 0x00, 0x00)
 COLOR_PING = (0x00, 0xFF, 0x00)
+
+def convert_coord_tuples_to_nparray(point_tuples):
+    nparray = np.zeros((2, len(point_tuples)))
+    for index in range(0, len(point_tuples)):
+        (x, y) = point_tuples[index]
+        nparray[0, index] = x
+        nparray[1, index] = y
+    return nparray
 
 def convert_image_file(image_filename, center_x_pixel, center_y_pixel, mm_per_pixel):
     point_filename = image_filename + '.point'
@@ -35,7 +44,7 @@ def convert_image_file(image_filename, center_x_pixel, center_y_pixel, mm_per_pi
                     pixel_color = image.getpixel((x_pixel, y_pixel))
 
                     x_mm = (x_pixel - center_x_pixel) * mm_per_pixel
-                    y_mm = (y_pixel - center_y_pixel) * mm_per_pixel
+                    y_mm = (center_y_pixel - y_pixel) * mm_per_pixel
 
                     if (pixel_color == COLOR_WALL):
                         wall_points.append((x_mm, y_mm))
@@ -49,11 +58,11 @@ def convert_image_file(image_filename, center_x_pixel, center_y_pixel, mm_per_pi
             }
 
             if len(wall_points) > 0:
-                point_data['wall_points'] = wall_points
+                point_data['wall_points'] = convert_coord_tuples_to_nparray(wall_points)
                 print(f'{len(wall_points)} wall points')
 
             if len(ping_points) > 0:
-                point_data['ping_points'] = ping_points
+                point_data['ping_points'] = convert_coord_tuples_to_nparray(ping_points)
                 print(f'{len(ping_points)} ping points')
 
             pickle.dump(point_data, point_file)

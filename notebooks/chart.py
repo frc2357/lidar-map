@@ -23,7 +23,7 @@ def plot_values(values, label):
     ax.grid(True)
     plt.show()
     
-def animate_results(P_values, Q, correspondences, corresp_values, xlim, ylim, markersize_1=2, markersize_2=1):
+def animate_results(P_values, Q, correspondences, corresp_values, xlim, ylim, markersize_1=1, markersize_2=1):
     """A function used to animate the iterative processes we use."""
     fig = plt.figure(figsize=(10, 6))
     anim_ax = fig.add_subplot(111)

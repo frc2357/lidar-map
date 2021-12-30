@@ -11,7 +11,7 @@ ROBOT_PING_COLOR = (0x0, 0x80, 0x00)
 ROBOT_PING_POINT_RADIUS = 2
 
 def load_frc2019_field():
-    return Map('FRC2019 LiDAR Lines.png', 'FRC2019 LiDAR Lines.png.point')
+    return Map('FRC2019 LiDAR Simplified.png', 'FRC2019 LiDAR Simplified.png.point')
 
 def _get_file_path(filename):
     this_module_dir = os.path.dirname(os.path.abspath(__file__))

@@ -36,6 +36,13 @@ class LidarUnitProcess:
     def is_running(self):
         return self.process != None
 
+    def print_scan(self):
+        print("data = [",end='')
+        for i in range(0,359):
+            print(f"{self.scan_data[i]},",end='')
+        print(']')
+
+
     def update(self):
         if (not self.conn.poll()):
             return
@@ -43,7 +50,8 @@ class LidarUnitProcess:
         is_complete, angle, distance = self.conn.recv()
 
         if is_complete:
-            print(f"LidarUnit [{self.usb_tty}]: scanned {self.scan_ping_count} points")
+            # print(f"LidarUnit [{self.usb_tty}]: scanned {self.scan_ping_count} points")
+            self.print_scan()
             self.scan_ping_count = 0
             return
 

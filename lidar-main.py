@@ -29,29 +29,29 @@ LOOP_ITERATION_WARNING_MS = 15
 #MAX_RANGE = 8230 # 27 feet (1/2 length of FRC field)
 
 ## Test Platform (310mm x 225mm) in smaller room
-ROBOT_WIDTH = 310
-ROBOT_LENGTH = 225
-MAX_RANGE = 4572 # 15 feet
+ROBOT_WIDTH = 736.6
+ROBOT_LENGTH = 762
+MAX_RANGE = 7924 # 15 feet
 
 LIDAR1_COLOR = (50, 255, 50)
-LIDAR1_X = ((ROBOT_WIDTH / 2) - 40) # 30 cm inside robot perimiter
-LIDAR1_Y = -((ROBOT_LENGTH / 2) - 40) # 30 cm inside robot perimiter
+LIDAR1_X = ((ROBOT_WIDTH / 2) - 52) # 52 mm inside robot perimiter
+LIDAR1_Y = -((ROBOT_LENGTH / 2) - 49) # 49 mm inside robot perimiter
 
 LIDAR2_COLOR = (255, 50, 50)
-LIDAR2_X = -((ROBOT_WIDTH / 2) - 40) # 30 cm inside robot perimiter
-LIDAR2_Y = ((ROBOT_LENGTH / 2) - 40) # 30 cm inside robot perimiter
+LIDAR2_X = -((ROBOT_WIDTH / 2) - 40) # 30 mm inside robot perimiter
+LIDAR2_Y = ((ROBOT_LENGTH / 2) - 40) # 30 mm inside robot perimiter
 
 lidar_units = [
     LidarUnitProcess(
         '/dev/ttyUSB0',        # lidar usb device
         -90,                   # angle offset
-        [ [180, 300] ]         # ignore regions
+        [  ]         # ignore regions
     ),
-    LidarUnitProcess(
-        '/dev/ttyUSB1',        # lidar usb device
-        90,                    # angle offset
-        [ [180, 300] ]         # ignore regions
-    ),
+    # LidarUnitProcess(
+    #     '/dev/ttyUSB1',        # lidar usb device
+    #     90,                    # angle offset
+    #     [ [180, 300] ]         # ignore regions
+    # ),
 ]
 
 lidar_unit_offsets = [
